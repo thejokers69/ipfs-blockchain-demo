@@ -2,6 +2,10 @@
 
 This project demonstrates decentralized storage using IPFS and the Ethereum blockchain with Hardhat. It uploads a file to IPFS, retrieves its CID, stores the CID in a smart contract, and interacts with the contract to read/write the CID.
 
+## Author
+
+- Mohamed Lakssir
+
 ## Prerequisites
 
 - Node.js (>=20.0.0) and npm

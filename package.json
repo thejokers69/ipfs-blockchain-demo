@@ -10,7 +10,7 @@
     "node": "npx hardhat node"
   },
   "keywords": [],
-  "author": "",
+  "author": "Mohamed Lakssir",
   "license": "ISC",
   "packageManager": "pnpm@10.11.0",
   "devDependencies": {
