@@ -104,6 +104,8 @@ This project demonstrates decentralized storage using IPFS and the Ethereum bloc
 - `scripts/uploadToIPFS.js`: Uploads a file to IPFS and retrieves its CID.
 - `hardhat.config.js`: Hardhat configuration.
 - `package.json`: Project dependencies and scripts.
+- `LICENSE`: The license under which the project is distributed.
+- `SECURITY.md`: Security policy and reporting guidelines for vulnerabilities.
 
 ## Troubleshooting
 
@@ -119,4 +121,8 @@ This project demonstrates decentralized storage using IPFS and the Ethereum bloc
 
 ## License
 
-MIT
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+## Security
+
+For information on security vulnerabilities, please refer to the [SECURITY.md](SECURITY.md) file.
