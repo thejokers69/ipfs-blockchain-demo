@@ -107,6 +107,22 @@ This project demonstrates decentralized storage using IPFS and the Ethereum bloc
 - `LICENSE`: The license under which the project is distributed.
 - `SECURITY.md`: Security policy and reporting guidelines for vulnerabilities.
 
+## Screenshots
+
+Here are some screenshots demonstrating the functionality of the project:
+
+1. **View of Output Node**  
+   ![View of Output Node](assets/screenshot/ViewOfOutputNode.png)
+
+2. **Overview of Docker IPFS Node**  
+   ![Overview of Docker IPFS Node](assets/screenshot/OverviewOfDockerIpfs-Node.png)
+
+3. **View of Output of Deploy**  
+   ![View of Output of Deploy](assets/screenshot/ViewOfOutputOfDeploy.png)
+
+4. **View of Output of interact.js**  
+   ![View of Output of interact.js](assets/screenshot/ViewOfOutputinteractjs.png)
+
 ## Troubleshooting
 
 - Ensure the Hardhat node is running (`http://127.0.0.1:8545`).
