@@ -17,7 +17,4 @@ contract IPFSStorage {
         imageCID = _imageCID;
     }
     
-    function getImageCID() public view returns (string memory) {
-        return imageCID;
-    }
 }
