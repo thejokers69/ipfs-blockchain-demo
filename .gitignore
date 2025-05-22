@@ -153,3 +153,4 @@ dist
 .yarn/install-state.gz
 .pnp.*
 ignition/modules/Lock.js
+scripts/setup-*-cors.*

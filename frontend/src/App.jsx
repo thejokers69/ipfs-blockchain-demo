@@ -5,20 +5,25 @@ import contractABI from './contractABI.json';
 // import './styles/global.css';
 import { Buffer } from 'buffer';
 
-// IPFS client configuration (use Infura or local IPFS node)
-const ipfs = create({ host: 'ipfs.infura.io', port: 5001, protocol: 'https' });
+// IPFS client configuration using local Docker node with CORS headers
+const ipfs = create({
+  url: 'http://localhost:5001/'
+});
 
 const CONTRACT_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
 
 function App() {
   const [account, setAccount] = useState(null);
   const [contract, setContract] = useState(null);
-  const [events, setEvents] = useState([]);
   const [message, setMessage] = useState('');
-  const [newEventName, setNewEventName] = useState('');
-  const [newEventCapacity, setNewEventCapacity] = useState('');
+  
+  // State for file and image uploads
+  const [file, setFile] = useState(null);
   const [imageFile, setImageFile] = useState(null);
-  const [isOwner, setIsOwner] = useState(false);
+  
+  // State for stored CIDs
+  const [fileCID, setFileCID] = useState('');
+  const [imageCID, setImageCID] = useState('');
 
   // Connect to MetaMask
   const connectWallet = async () => {
@@ -31,12 +36,11 @@ function App() {
         const signer = await provider.getSigner();
         const contractInstance = new ethers.Contract(CONTRACT_ADDRESS, contractABI.abi, signer);
         setContract(contractInstance);
-
-        // Check if the connected account is the owner
-        const owner = await contractInstance.owner();
-        setIsOwner(owner.toLowerCase() === accounts[0].toLowerCase());
-
+        
         setMessage('Connected successfully!');
+        
+        // Fetch current CIDs after connecting
+        fetchCIDs(contractInstance);
       } catch (error) {
         setMessage('Failed to connect: ' + error.message);
       }
@@ -45,93 +49,118 @@ function App() {
     }
   };
 
-  // Fetch events from the contract
-  const fetchEvents = async () => {
-    if (!contract) return;
+  // Fetch CIDs from the contract
+  const fetchCIDs = React.useCallback(async (contractInstance) => {
     try {
-      // Debug the contract instance to ensure ABI is loaded correctly
-      console.log('Contract ABI keys:', Object.keys(contract.interface.fragments));  // Check for missing methods
-      const eventCountResult = await contract.getEventCount();
-      console.log('Raw result from getEventCount:', eventCountResult);  // Log raw result
-      const eventCount = Number(eventCountResult);  // Explicit conversion
+      const currentContract = contractInstance || contract;
+      if (!currentContract) return;
+
+      // Fetch file CID
+      const fetchedFileCID = await currentContract.getCID();
+      setFileCID(fetchedFileCID);
       
-      const eventList = [];
-      for (let i = 0; i < eventCount; i++) {
-        // Ensure getEvent is called correctly; add error handling
-        try {
-          const eventData = await contract.getEvent(i);
-          const hasReserved = await contract.hasReserved(i, account);
-          eventList.push({
-            id: i,
-            name: eventData[0],  // Access by index if ABI decoding fails
-            capacity: Number(eventData[1]),
-            booked: Number(eventData[2]),
-            imageCID: eventData[3],
-            hasReserved,
-          });
-        } catch (subError) {
-          console.error(`Error fetching event ${i}:`, subError);
-        }
-      }
-      setEvents(eventList);
+      // Fetch image CID
+      const fetchedImageCID = await currentContract.getImageCID();
+      setImageCID(fetchedImageCID);
+      
+      console.log('Fetched CIDs:', { fileCID: fetchedFileCID, imageCID: fetchedImageCID });
     } catch (error) {
-      console.error('Detailed error fetching events:', error);  // More detailed logging
-      setMessage('Error fetching events: ' + error.message);
+      console.error('Error fetching CIDs:', error);
+      setMessage('Error fetching CIDs: ' + error.message);
     }
-  };
+  }, [contract]);
 
-  // Reserve a spot for an event
-  const reserveSpot = async (eventId) => {
+  // Upload file and set CID
+  const uploadFile = async () => {
+    if (!file) {
+      setMessage('Please select a file first');
+      return;
+    }
+    
     if (!contract) {
-      setMessage('Please connect your wallet');
+      setMessage('Please connect your wallet first');
       return;
     }
-    try {
-      const tx = await contract.reserve(eventId);
-      await tx.wait();
-      setMessage('Reservation successful!');
-      fetchEvents();
-    } catch (error) {
-      setMessage('Reservation failed: ' + error.message);
-    }
-  };
-
-  // Add a new event with image
-  const addEvent = async () => {
-    if (!newEventName.trim() || !newEventCapacity || !imageFile) {
-      setMessage('Please provide event name, capacity, and image');
-      return;
-    }
+    
     try {
       const reader = new FileReader();
       reader.onloadend = async () => {
-        const buffer = Buffer.from(reader.result);
-        const result = await ipfs.add(buffer);
-        const imageCID = result.path;
-
-        const tx = await contract.addEvent(newEventName.trim(), newEventCapacity, imageCID);
-        await tx.wait();
-
-        setMessage('Event added successfully!');
-        setNewEventName('');
-        setNewEventCapacity('');
-        setImageFile(null);
-        fetchEvents();
+        try {
+          // Upload to IPFS
+          const buffer = Buffer.from(reader.result);
+          const result = await ipfs.add(buffer);
+          const cid = result.path;
+          
+          // Store CID in contract
+          const tx = await contract.setCID(cid);
+          await tx.wait();
+          
+          setMessage('File uploaded successfully! CID: ' + cid);
+          setFileCID(cid);
+          setFile(null);
+        } catch (err) {
+          console.error('Error uploading file:', err);
+          setMessage('Error uploading file: ' + err.message);
+        }
       };
-      reader.readAsArrayBuffer(imageFile);
+      
+      reader.readAsArrayBuffer(file);
     } catch (error) {
-      setMessage('Failed to add event: ' + error.message);
+      setMessage('Failed to upload file: ' + error.message);
     }
   };
 
-  // Fetch events when contract or account changes
+  // Upload image and set CID
+  const uploadImage = async () => {
+    if (!imageFile) {
+      setMessage('Please select an image first');
+      return;
+    }
+    
+    if (!contract) {
+      setMessage('Please connect your wallet first');
+      return;
+    }
+    
+    try {
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        try {
+          // Upload to IPFS
+          const buffer = Buffer.from(reader.result);
+          const result = await ipfs.add(buffer);
+          const cid = result.path;
+          
+          // Store CID in contract
+          const tx = await contract.setImageCID(cid);
+          await tx.wait();
+          
+          setMessage('Image uploaded successfully! CID: ' + cid);
+          setImageCID(cid);
+          setImageFile(null);
+        } catch (err) {
+          console.error('Error uploading image:', err);
+          setMessage('Error uploading image: ' + err.message);
+        }
+      };
+      
+      reader.readAsArrayBuffer(imageFile);
+    } catch (error) {
+      setMessage('Failed to upload image: ' + error.message);
+    }
+  };
+
+  // Fetch CIDs when contract changes
   useEffect(() => {
-    fetchEvents();
-  }, [contract, account,]);
+    if (contract) {
+      fetchCIDs();
+    }
+  }, [contract, fetchCIDs]);
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-3xl font-bold mb-4">Event Booking DApp</h1>
+      <h1 className="text-3xl font-bold mb-4">IPFS Storage DApp</h1>
+      
       {!account ? (
         <button
           className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
@@ -142,87 +171,78 @@ function App() {
       ) : (
         <p className="mb-4">Connected: {account}</p>
       )}
+      
       {message && (
         <div className={`p-4 mb-4 rounded ${message.includes('success') ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
           {message}
         </div>
       )}
-      {isOwner && (
-        <div className="mb-8 p-4 border rounded">
-          <h2 className="text-xl font-semibold mb-4">Add New Event</h2>
-          <input
-            type="text"
-            placeholder="Event Name"
-            value={newEventName}
-            onChange={(e) => setNewEventName(e.target.value)}
-            className="border p-2 mb-2 w-full"
-          />
-          <input
-            type="number"
-            placeholder="Capacity"
-            value={newEventCapacity}
-            onChange={(e) => setNewEventCapacity(e.target.value)}
-            className="border p-2 mb-2 w-full"
-          />
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => setImageFile(e.target.files[0])}
-            className="mb-2"
-          />
-          <button
-            className="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600"
-            onClick={addEvent}
-          >
-            Add Event
-          </button>
+      
+      {contract && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* File Upload Section */}
+          <div className="p-4 border rounded">
+            <h2 className="text-xl font-semibold mb-4">Upload File</h2>
+            <input
+              type="file"
+              onChange={(e) => setFile(e.target.files[0])}
+              className="mb-4"
+            />
+            <button
+              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+              onClick={uploadFile}
+            >
+              Upload File to IPFS
+            </button>
+            
+            {fileCID && (
+              <div className="mt-4">
+                <h3 className="font-medium">Current File CID:</h3>
+                <p className="break-all bg-gray-100 p-2 rounded">{fileCID}</p>
+                <a 
+                  href={`https://ipfs.io/ipfs/${fileCID}`} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-blue-500 hover:underline mt-2 inline-block"
+                >
+                  View File on IPFS
+                </a>
+              </div>
+            )}
+          </div>
+          
+          {/* Image Upload Section */}
+          <div className="p-4 border rounded">
+            <h2 className="text-xl font-semibold mb-4">Upload Image</h2>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setImageFile(e.target.files[0])}
+              className="mb-4"
+            />
+            <button
+              className="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600"
+              onClick={uploadImage}
+            >
+              Upload Image to IPFS
+            </button>
+            
+            {imageCID && (
+              <div className="mt-4">
+                <h3 className="font-medium">Current Image CID:</h3>
+                <p className="break-all bg-gray-100 p-2 rounded">{imageCID}</p>
+                <div className="mt-2">
+                  <img
+                    src={`https://ipfs.io/ipfs/${imageCID}`}
+                    alt="Stored Image"
+                    className="max-w-full h-auto rounded border"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
-      <table className="w-full border-collapse border">
-        <thead>
-          <tr className="bg-gray-500">
-            <th className="border p-2">Image</th>
-            <th className="border p-2">Event</th>
-            <th className="border p-2">Capacity</th>
-            <th className="border p-2">Remaining Spots</th>
-            <th className="border p-2">Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {events.map((event) => (
-            <tr key={event.id}>
-              <td className="border p-2">
-                {event.imageCID ? (
-                  <img
-                    src={`https://ipfs.io/ipfs/${event.imageCID}`}
-                    alt={event.name}
-                    className="w-16 h-16 object-cover"
-                  />
-                ) : (
-                  'No Image'
-                )}
-              </td>
-              <td className="border p-2">{event.name}</td>
-              <td className="border p-2">{event.capacity}</td>
-              <td className="border p-2">{event.remaining}</td>
-              <td className="border p-2">
-                {event.remaining === 0 ? (
-                  <span className="text-red-600">Complet</span>
-                ) : event.hasReserved ? (
-                  <span className="text-gray-600">Vous avez déjà réservé</span>
-                ) : (
-                  <button
-                    className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
-                    onClick={() => reserveSpot(event.id)}
-                  >
-                    Réserver
-                  </button>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
     </div>
   );
 }

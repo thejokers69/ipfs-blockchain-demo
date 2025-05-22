@@ -10,6 +10,10 @@ services:
       - ipfs_staging:/export
       - ipfs_data:/data/ipfs
     restart: unless-stopped
+    environment:
+      - IPFS_PROFILE=server
+      - IPFS_CORS_ALLOWED_ORIGINS=["*"]
+      - IPFS_API_CORS_ALLOWED_ORIGINS=["*"]
     command: daemon --migrate
 
 volumes:
