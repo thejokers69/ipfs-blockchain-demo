@@ -30,6 +30,32 @@
       "type": "function"
     },
     {
+      "inputs": [],
+      "name": "getImageCID",
+      "outputs": [
+        {
+          "internalType": "string",
+          "name": "",
+          "type": "string"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "imageCID",
+      "outputs": [
+        {
+          "internalType": "string",
+          "name": "",
+          "type": "string"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
       "inputs": [
         {
           "internalType": "string",
@@ -38,6 +64,19 @@
         }
       ],
       "name": "setCID",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "string",
+          "name": "_imageCID",
+          "type": "string"
+        }
+      ],
+      "name": "setImageCID",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"

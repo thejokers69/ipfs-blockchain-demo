@@ -7,6 +7,9 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "deploy": "npx hardhat run scripts/deploy.js --network localhost",
     "interact": "npx hardhat run scripts/interact.js --network localhost",
+    "deploy:ipfs": "npx hardhat run scripts/deployIPFSStorage.js --network localhost",
+    "interact:ipfs": "npx hardhat run scripts/interactIPFSStorage.js --network localhost",
+    "setup-cors": "node scripts/setup-ipfs-cors.js",
     "node": "npx hardhat node"
   },
   "keywords": [],
@@ -14,7 +17,8 @@
   "license": "ISC",
   "packageManager": "pnpm@10.11.0",
   "devDependencies": {
-    "hardhat": "^2.24.0"
+    "hardhat": "^2.24.0",
+    "node-fetch": "^3.3.2"
   },
   "dependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
